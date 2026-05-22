@@ -1,0 +1,30 @@
+name: cd by raj
+
+on:
+  workflow_run:
+    workflows: ["ci by raj"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Execute remote SSH commands
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.PEM_PASSWORD }}
+          port: 22
+          script: |
+            cd ~/Github-actioin-3T
+            git pull origin main
+            docker compose pull
+            docker compose up -d
