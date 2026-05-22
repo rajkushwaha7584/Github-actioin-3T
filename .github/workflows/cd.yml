@@ -12,25 +12,29 @@ jobs:
 
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Execute remote SSH commands
-        uses: appleboy/ssh-action@v1
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.PEM_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ubuntu
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-            if [ ! -d "Github-actioin-3T/.git" ]; then
-              git clone https://github.com/rajkushwaha7584/Github-actioin-3T.git
-            fi
-
-            cd Github-actioin-3T
-            git pull origin main
-            docker compose pull
-            docker compose up -d
+      - name: Deploy on EC2 using SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy SkillPulse using GitHub Actions OIDC and SSM" \
+            --parameters 'commands=[
+              "cd /home/ubuntu",
+              "if [ ! -d Github-actioin-3T/.git ]; then git clone https://github.com/rajkushwaha7584/Github-actioin-3T.git; fi",
+              "cd Github-actioin-3T",
+              "git pull origin main",
+              "cat > .env <<EOF\nMYSQL_ROOT_PASSWORD=rootpassword123\nDB_HOST=db\nDB_PORT=3306\nDB_USER=skillpulse\nDB_PASSWORD=skillpulse123\nDB_NAME=skillpulse\nDOCKERHUB_USERNAME=raj24kush\nEOF",
+              "docker compose up -d --build"
+            ]' \
+            --region "${{ secrets.AWS_REGION }}"
