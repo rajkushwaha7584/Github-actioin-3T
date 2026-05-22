@@ -1,11 +1,15 @@
 name: ci by raj
+
 on:
   push:
+
 jobs:
-  build: #joob ka naam haan
-    run-on: ubuntu:latest #free github jo free hota hann
-  steps:
-  -name: checkout code #clone kerna  into ubuntu runer
-   uses: actions/checkout@v4
-  -name: setup docker
-   uses: action/setup-buildx-action@v4
+  build: # job ka naam
+    runs-on: ubuntu-latest # GitHub ka free Ubuntu runner
+
+    steps:
+      - name: Checkout code # code ko runner me clone karta hai
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx # Docker build setup
+        uses: docker/setup-buildx-action@v3
